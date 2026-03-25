@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — QR SaaS</title>
+  <meta name="description" content="Manage your dynamic QR codes, customize landing pages, and track analytics." />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter','system-ui','sans-serif'] },
+          colors: {
+            dark: { 900:'#07060b', 800:'#0f0d18', 700:'#161324', 600:'#1d1933' },
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    body { background: #07060b; font-family: 'Inter', sans-serif; }
+    .glass { background: rgba(255,255,255,0.04); backdrop-filter: blur(18px); border: 1px solid rgba(255,255,255,0.07); }
+    .glass-hover:hover { background: rgba(255,255,255,0.07); }
+    .glass-active { background: rgba(139,92,246,0.12) !important; border-color: rgba(139,92,246,0.3) !important; }
+    .glow-sm { box-shadow: 0 0 40px rgba(139,92,246,0.08); }
+    .fade-in { animation: fadeUp .4s ease-out both; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+    .slide-in { animation: slideIn .3s ease-out both; }
+    @keyframes slideIn { from{opacity:0;transform:translateX(-20px)} to{opacity:1;transform:translateX(0)} }
+    input[type="color"] { -webkit-appearance: none; border: none; cursor: pointer; }
+    input[type="color"]::-webkit-color-swatch-wrapper { padding: 2px; }
+    input[type="color"]::-webkit-color-swatch { border: none; border-radius: 6px; }
+    .scrollbar-thin::-webkit-scrollbar { width: 4px; }
+    .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+    .scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+    /* Toast */
+    .toast { position: fixed; bottom: 24px; right: 24px; z-index: 9999; transform: translateY(20px); opacity: 0; transition: all .3s ease; }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    /* Live preview iframe-like container */
+    .preview-phone { width: 280px; height: 500px; border-radius: 24px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 0 2px rgba(255,255,255,0.05); }
+    @media (max-width: 1024px) { .preview-phone { width: 100%; height: 400px; border-radius: 16px; } }
+  </style>
+</head>
+<body class="min-h-screen text-white">
+  <!-- Toast -->
+  <div id="toast" class="toast glass rounded-xl px-5 py-3 text-sm font-medium"></div>
+
+  <!-- Mobile header -->
+  <header id="mobileHeader" class="lg:hidden fixed top-0 left-0 right-0 z-50 glass border-b border-white/5 px-4 py-3 flex items-center justify-between">
+    <button onclick="toggleSidebar()" class="p-2 rounded-lg hover:bg-white/10 transition">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+    <span class="font-bold text-sm">QR SaaS</span>
+    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600" id="mobileAvatar"></div>
+  </header>
+
+  <div class="flex min-h-screen">
+    <!-- Sidebar Overlay -->
+    <div id="sidebarOverlay" onclick="toggleSidebar()" class="lg:hidden fixed inset-0 bg-black/50 z-40 hidden"></div>
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="fixed lg:static inset-y-0 left-0 z-50 w-64 border-r border-white/5 bg-[#0a0914] flex flex-col transform -translate-x-full lg:translate-x-0 transition-transform duration-300">
+      <!-- Brand -->
+      <div class="p-5 border-b border-white/5">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center flex-shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+            </svg>
+          </div>
+          <div>
+            <h1 class="font-bold text-sm">QR SaaS</h1>
+            <p class="text-[10px] text-gray-500">Dynamic QR Manager</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Nav -->
+      <nav class="flex-1 p-3 space-y-1">
+        <button onclick="showView('codes')" id="nav-codes" class="nav-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-all">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+          My Codes
+        </button>
+        <button onclick="showView('create')" id="nav-create" class="nav-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-all">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+          Create New
+        </button>
+      </nav>
+
+      <!-- User -->
+      <div class="p-3 border-t border-white/5">
+        <div class="flex items-center gap-3 px-3 py-2">
+          <div id="sidebarAvatar" class="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex-shrink-0 overflow-hidden">
+            <img id="sidebarAvatarImg" src="" alt="" class="w-full h-full object-cover hidden" />
+          </div>
+          <div class="flex-1 min-w-0">
+            <p id="userName" class="text-xs font-semibold truncate">Loading...</p>
+            <p id="userEmail" class="text-[10px] text-gray-500 truncate"></p>
+          </div>
+          <button onclick="logout()" title="Logout" class="p-1.5 rounded-lg hover:bg-white/10 text-gray-500 hover:text-white transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main content -->
+    <main class="flex-1 lg:ml-0 pt-14 lg:pt-0 overflow-y-auto">
+      <!-- ─────── VIEW: My Codes ─────── -->
+      <div id="view-codes" class="view p-6 lg:p-8 max-w-6xl mx-auto">
+        <div class="flex items-center justify-between mb-8">
+          <div>
+            <h2 class="text-2xl font-bold">My Codes</h2>
+            <p class="text-sm text-gray-500 mt-1">Manage your dynamic QR codes</p>
+          </div>
+          <button onclick="showView('create')" class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-sm font-semibold hover:opacity-90 transition shadow-lg shadow-violet-500/20">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+            New Code
+          </button>
+        </div>
+
+        <!-- Empty state -->
+        <div id="emptyState" class="hidden text-center py-20">
+          <div class="mx-auto w-20 h-20 rounded-2xl glass flex items-center justify-center mb-6">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" /></svg>
+          </div>
+          <h3 class="text-lg font-semibold mb-2">No QR codes yet</h3>
+          <p class="text-gray-500 text-sm mb-6">Create your first dynamic QR code to get started.</p>
+          <button onclick="showView('create')" class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-sm font-semibold hover:opacity-90 transition">Create Your First Code</button>
+        </div>
+
+        <!-- Grid -->
+        <div id="codesGrid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+      </div>
+
+      <!-- ─────── VIEW: Create / Edit ─────── -->
+      <div id="view-create" class="view hidden p-6 lg:p-8">
+        <div class="flex items-center gap-3 mb-8">
+          <button onclick="showView('codes')" class="p-2 rounded-lg hover:bg-white/10 transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+          </button>
+          <h2 id="editorTitle" class="text-2xl font-bold">Create New QR Code</h2>
+        </div>
+
+        <div class="flex flex-col lg:flex-row gap-6 max-w-7xl">
+          <!-- Left: Form -->
+          <div class="flex-1 space-y-5 min-w-0">
+            <!-- QR Code Title -->
+            <div class="glass rounded-2xl p-5 glow-sm">
+              <h3 class="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-4">QR Code Details</h3>
+              <label class="block text-xs text-gray-400 mb-1.5">Title</label>
+              <input id="fTitle" type="text" value="My QR Code" placeholder="e.g. Summer Sale 2026" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20 transition placeholder-gray-600" />
+
+              <!-- QR Type selector -->
+              <label class="block text-xs text-gray-400 mb-2 mt-4">QR Type</label>
+              <div class="flex gap-2 mb-4">
+                <button onclick="setQrType('landing')" data-qrtype="landing" class="qrtype-btn flex-1 py-2.5 rounded-xl border border-white/10 bg-white/5 text-xs font-semibold transition hover:bg-white/10">
+                  <svg class="w-4 h-4 mx-auto mb-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>
+                  Landing Page
+                </button>
+                <button onclick="setQrType('redirect')" data-qrtype="redirect" class="qrtype-btn flex-1 py-2.5 rounded-xl border border-white/10 bg-white/5 text-xs font-semibold transition hover:bg-white/10">
+                  <svg class="w-4 h-4 mx-auto mb-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                  URL Redirect
+                </button>
+              </div>
+
+              <!-- Redirect URL (only shown for redirect type) -->
+              <div id="redirectUrlWrap" class="hidden">
+                <label class="block text-xs text-gray-400 mb-1.5">Destination URL</label>
+                <input id="fRedirectUrl" type="url" placeholder="https://example.com" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20 transition placeholder-gray-600" />
+                <p class="text-[10px] text-gray-600 mt-1">Scanning this QR code will redirect directly to this URL</p>
+              </div>
+            </div>
+
+            <!-- QR Stylist -->
+            <div class="glass rounded-2xl p-5 glow-sm">
+              <h3 class="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-4">QR Stylist</h3>
+              <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label class="block text-xs text-gray-400 mb-1.5">Foreground</label>
+                  <div class="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2">
+                    <input id="fFgColor" type="color" value="#000000" class="w-8 h-8 rounded-lg" />
+                    <input id="fFgHex" type="text" value="#000000" maxlength="7" class="flex-1 bg-transparent text-sm font-mono focus:outline-none" oninput="syncColor('fg')" />
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-400 mb-1.5">Background</label>
+                  <div class="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2">
+                    <input id="fBgColor" type="color" value="#FFFFFF" class="w-8 h-8 rounded-lg" />
+                    <input id="fBgHex" type="text" value="#FFFFFF" maxlength="7" class="flex-1 bg-transparent text-sm font-mono focus:outline-none" oninput="syncColor('bg')" />
+                  </div>
+                </div>
+              </div>
+
+              <label class="block text-xs text-gray-400 mb-2">Dot Shape</label>
+              <div class="flex gap-2 mb-4">
+                <button onclick="setDotShape('square')" data-shape="square" class="dot-btn flex-1 py-2.5 rounded-xl border border-white/10 bg-white/5 text-xs font-semibold transition hover:bg-white/10">
+                  <svg class="w-5 h-5 mx-auto mb-1" viewBox="0 0 20 20"><rect x="3" y="3" width="14" height="14" fill="currentColor" rx="1"/></svg>
+                  Square
+                </button>
+                <button onclick="setDotShape('rounded')" data-shape="rounded" class="dot-btn flex-1 py-2.5 rounded-xl border border-white/10 bg-white/5 text-xs font-semibold transition hover:bg-white/10">
+                  <svg class="w-5 h-5 mx-auto mb-1" viewBox="0 0 20 20"><rect x="3" y="3" width="14" height="14" fill="currentColor" rx="5"/></svg>
+                  Rounded
+                </button>
+                <button onclick="setDotShape('diamond')" data-shape="diamond" class="dot-btn flex-1 py-2.5 rounded-xl border border-white/10 bg-white/5 text-xs font-semibold transition hover:bg-white/10">
+                  <svg class="w-5 h-5 mx-auto mb-1" viewBox="0 0 20 20"><polygon points="10,2 18,10 10,18 2,10" fill="currentColor"/></svg>
+                  Diamond
+                </button>
+              </div>
+
+              <!-- Logo upload -->
+              <label class="block text-xs text-gray-400 mb-1.5">Center Logo</label>
+              <div class="flex items-center gap-3">
+                <label class="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-white/15 bg-white/3 text-xs text-gray-400 cursor-pointer hover:bg-white/5 hover:border-white/25 transition">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                  <span id="logoLabel">Upload Logo</span>
+                  <input id="fLogo" type="file" accept="image/*" class="hidden" onchange="onLogoChange(this)" />
+                </label>
+                <button id="clearLogoBtn" onclick="clearLogo()" class="hidden p-2 rounded-lg hover:bg-white/10 text-gray-500 hover:text-red-400 transition" title="Remove logo">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Landing Page Builder (hidden when type=redirect) -->
+            <div id="landingPageSection" class="glass rounded-2xl p-5 glow-sm">
+              <h3 class="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-4">Landing Page</h3>
+              <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-xs text-gray-400 mb-1.5">Background Color</label>
+                    <div class="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2">
+                      <input id="fPageBgColor" type="color" value="#0f0c29" class="w-8 h-8 rounded-lg" oninput="updatePreview()" />
+                      <input id="fPageBgHex" type="text" value="#0f0c29" maxlength="7" class="flex-1 bg-transparent text-sm font-mono focus:outline-none" oninput="syncPageBgColor()" />
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-xs text-gray-400 mb-1.5">Background Image</label>
+                    <input id="fPageBgImg" type="text" placeholder="https://..." class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-violet-500/50 transition placeholder-gray-600" oninput="updatePreview()" />
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-400 mb-1.5">Page Title</label>
+                  <input id="fPageTitle" type="text" value="Welcome!" placeholder="Page headline" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-violet-500/50 transition placeholder-gray-600" oninput="updatePreview()" />
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-400 mb-1.5">Description</label>
+                  <textarea id="fPageDesc" rows="3" placeholder="Describe your offer..." class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-violet-500/50 transition placeholder-gray-600 resize-none" oninput="updatePreview()">Thanks for scanning!</textarea>
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-400 mb-1.5">Promo Code</label>
+                  <input id="fPromoCode" type="text" value="PROMO2026" placeholder="e.g. SAVE20" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm font-mono tracking-wider focus:outline-none focus:border-violet-500/50 transition placeholder-gray-600" oninput="updatePreview()" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Action buttons -->
+            <div class="flex items-center gap-3">
+              <button id="saveBtn" onclick="saveQR()" class="flex-1 py-3 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-sm font-semibold hover:opacity-90 transition shadow-lg shadow-violet-500/20">
+                Save QR Code
+              </button>
+              <button id="downloadBtn" onclick="downloadQR()" class="hidden px-5 py-3 rounded-xl glass border border-white/10 text-sm font-semibold hover:bg-white/10 transition">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 inline mr-1 -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                Download
+              </button>
+            </div>
+          </div>
+
+          <!-- Right: Previews -->
+          <div class="lg:w-[340px] flex-shrink-0 space-y-5 lg:sticky lg:top-8 self-start">
+            <!-- QR Preview -->
+            <div class="glass rounded-2xl p-5 text-center glow-sm">
+              <h3 class="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-4">QR Code Preview</h3>
+              <div id="qrPreview" class="mx-auto w-48 h-48 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden">
+                <p class="text-xs text-gray-600">Save to generate</p>
+              </div>
+              <p id="qrSlugInfo" class="text-[10px] text-gray-600 mt-3 hidden"></p>
+            </div>
+
+            <!-- Landing Preview (hidden when type=redirect) -->
+            <div id="landingPreviewSection" class="glass rounded-2xl p-5 glow-sm">
+              <h3 class="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-4">Landing Page Preview</h3>
+              <div class="preview-phone mx-auto">
+                <div id="livePreview" class="w-full h-full flex items-center justify-center p-5 text-center" style="background-color:#0f0c29;">
+                  <div>
+                    <div class="mx-auto w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center mb-4">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
+                    </div>
+                    <h4 id="prevTitle" class="text-lg font-extrabold text-white mb-2">Welcome!</h4>
+                    <p id="prevDesc" class="text-xs text-gray-300 mb-4 leading-relaxed">Thanks for scanning!</p>
+                    <div id="prevPromoWrap" class="mb-3">
+                      <p class="text-[9px] uppercase tracking-widest text-gray-400 mb-1.5 font-semibold">Promo Code</p>
+                      <div class="border border-dashed border-white/20 rounded-xl py-3 px-4 bg-white/5">
+                        <span id="prevPromo" class="text-base font-black tracking-wider text-white">PROMO2026</span>
+                      </div>
+                    </div>
+                    <div class="py-2 px-4 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 text-xs font-semibold text-white inline-block">Copy Code</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─────── VIEW: Analytics ─────── -->
+      <div id="view-analytics" class="view hidden p-6 lg:p-8 max-w-5xl mx-auto">
+        <div class="flex items-center gap-3 mb-8">
+          <button onclick="showView('codes')" class="p-2 rounded-lg hover:bg-white/10 transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+          </button>
+          <h2 id="analyticsTitle" class="text-2xl font-bold">Analytics</h2>
+        </div>
+
+        <!-- Stats cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+          <div class="glass rounded-2xl p-5 glow-sm">
+            <p class="text-xs text-gray-400 mb-1">Total Scans</p>
+            <p id="statScans" class="text-3xl font-extrabold bg-gradient-to-r from-violet-400 to-indigo-400 bg-clip-text text-transparent">0</p>
+          </div>
+          <div class="glass rounded-2xl p-5 glow-sm">
+            <p class="text-xs text-gray-400 mb-1">Unique Visitors</p>
+            <p id="statVisitors" class="text-3xl font-extrabold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">0</p>
+          </div>
+          <div class="glass rounded-2xl p-5 glow-sm">
+            <p class="text-xs text-gray-400 mb-1">Copy CTR</p>
+            <p id="statCTR" class="text-3xl font-extrabold bg-gradient-to-r from-emerald-400 to-green-400 bg-clip-text text-transparent">0%</p>
+          </div>
+        </div>
+
+        <!-- Chart -->
+        <div class="glass rounded-2xl p-6 glow-sm">
+          <h3 class="text-sm font-semibold mb-4">Scans — Last 30 Days</h3>
+          <div class="relative" style="height:280px">
+            <canvas id="scansChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ═══════════════════════════ JS ═══════════════════════════ -->
+  <script>
+    // ── State ──
+    let currentView = 'codes';
+    let editingId = null;
+    let dotShape = 'square';
+    let qrType = 'landing';
+    let scansChart = null;
+
+    // ── Init ──
+    document.addEventListener('DOMContentLoaded', () => {
+      loadUser();
+      loadCodes();
+      setupColorSync();
+    });
+
+    // ── Sidebar ──
+    function toggleSidebar() {
+      const sb = document.getElementById('sidebar');
+      const ov = document.getElementById('sidebarOverlay');
+      sb.classList.toggle('-translate-x-full');
+      ov.classList.toggle('hidden');
+    }
+
+    // ── Views ──
+    function showView(name) {
+      document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+      document.getElementById('view-' + name).classList.remove('hidden');
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('glass-active', 'text-white'));
+      const nb = document.getElementById('nav-' + name);
+      if (nb) { nb.classList.add('glass-active', 'text-white'); }
+      currentView = name;
+
+      if (name === 'codes') { loadCodes(); }
+      if (name === 'create' && !editingId) { resetForm(); }
+      // Close mobile sidebar
+      const sb = document.getElementById('sidebar');
+      if (!sb.classList.contains('-translate-x-full') && window.innerWidth < 1024) toggleSidebar();
+    }
+
+    // ── User ──
+    async function loadUser() {
+      try {
+        const res = await fetch('/api/auth/me');
+        const u = await res.json();
+        document.getElementById('userName').textContent = u.name || 'User';
+        document.getElementById('userEmail').textContent = u.email || '';
+        if (u.avatar) {
+          const img = document.getElementById('sidebarAvatarImg');
+          img.src = u.avatar;
+          img.classList.remove('hidden');
+        }
+      } catch (e) { window.location.href = '/login'; }
+    }
+
+    async function logout() {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location.href = '/login';
+    }
+
+    // ── Codes list ──
+    async function loadCodes() {
+      try {
+        const res = await fetch('/api/qr');
+        const codes = await res.json();
+        const grid = document.getElementById('codesGrid');
+        const empty = document.getElementById('emptyState');
+
+        if (!codes.length) {
+          grid.innerHTML = '';
+          empty.classList.remove('hidden');
+          return;
+        }
+        empty.classList.add('hidden');
+
+        grid.innerHTML = codes.map((c, i) => `
+          <div class="glass rounded-2xl p-5 glow-sm hover:border-violet-500/20 transition-all cursor-pointer group fade-in" style="animation-delay:${i * 60}ms" onclick="editCode(${c.id})">
+            <div class="flex items-start justify-between mb-4">
+              <div class="flex-1 min-w-0">
+                <h3 class="font-semibold text-sm truncate">${esc(c.title)}</h3>
+                <p class="text-[10px] text-gray-500 mt-0.5">${new Date(c.created_at).toLocaleDateString()}</p>
+              </div>
+              <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onclick="event.stopPropagation(); openAnalytics(${c.id}, '${esc(c.title)}')" title="Analytics" class="p-1.5 rounded-lg hover:bg-white/10 text-gray-500 hover:text-violet-400 transition">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                </button>
+                <button onclick="event.stopPropagation(); deleteCode(${c.id})" title="Delete" class="p-1.5 rounded-lg hover:bg-white/10 text-gray-500 hover:text-red-400 transition">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </button>
+              </div>
+            </div>
+            <div class="mx-auto w-32 h-32 rounded-xl bg-white flex items-center justify-center overflow-hidden mb-4">
+              <img src="/api/qr/${c.id}/image" alt="QR" class="w-full h-full object-contain" loading="lazy" />
+            </div>
+            <div class="flex items-center justify-between text-[10px] text-gray-500">
+              <span class="flex items-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                ${c.total_scans} scans
+              </span>
+              <span class="px-2 py-0.5 rounded-full ${c.qr_type === 'redirect' ? 'bg-blue-500/10 text-blue-400' : 'bg-violet-500/10 text-violet-400'} font-medium">${c.qr_type === 'redirect' ? '↗ link' : '/go/' + c.slug}</span>
+            </div>
+          </div>
+        `).join('');
+      } catch (e) { console.error(e); }
+    }
+
+    // ── Create / Edit ──
+    function resetForm() {
+      editingId = null;
+      document.getElementById('editorTitle').textContent = 'Create New QR Code';
+      document.getElementById('fTitle').value = 'My QR Code';
+      document.getElementById('fFgColor').value = '#000000'; document.getElementById('fFgHex').value = '#000000';
+      document.getElementById('fBgColor').value = '#FFFFFF'; document.getElementById('fBgHex').value = '#FFFFFF';
+      setDotShape('square');
+      document.getElementById('fPageBgColor').value = '#0f0c29'; document.getElementById('fPageBgHex').value = '#0f0c29';
+      document.getElementById('fPageBgImg').value = '';
+      document.getElementById('fPageTitle').value = 'Welcome!';
+      document.getElementById('fPageDesc').value = 'Thanks for scanning!';
+      document.getElementById('fPromoCode').value = 'PROMO2026';
+      document.getElementById('logoLabel').textContent = 'Upload Logo';
+      document.getElementById('clearLogoBtn').classList.add('hidden');
+      document.getElementById('downloadBtn').classList.add('hidden');
+      document.getElementById('qrPreview').innerHTML = '<p class="text-xs text-gray-600">Save to generate</p>';
+      document.getElementById('qrSlugInfo').classList.add('hidden');
+      document.getElementById('fRedirectUrl').value = '';
+      setQrType('landing');
+      updatePreview();
+    }
+
+    async function editCode(id) {
+      try {
+        const res = await fetch(`/api/qr/${id}`);
+        const c = await res.json();
+        editingId = c.id;
+        document.getElementById('editorTitle').textContent = 'Edit QR Code';
+        document.getElementById('fTitle').value = c.title || '';
+        setQrType(c.qr_type || 'landing');
+        document.getElementById('fRedirectUrl').value = c.redirect_url || '';
+        document.getElementById('fFgColor').value = c.fg_color; document.getElementById('fFgHex').value = c.fg_color;
+        document.getElementById('fBgColor').value = c.bg_color; document.getElementById('fBgHex').value = c.bg_color;
+        setDotShape(c.dot_shape || 'square');
+        document.getElementById('fPageBgColor').value = c.page_bg_color || '#0f0c29'; document.getElementById('fPageBgHex').value = c.page_bg_color || '#0f0c29';
+        document.getElementById('fPageBgImg').value = c.page_bg_image || '';
+        document.getElementById('fPageTitle').value = c.page_title || '';
+        document.getElementById('fPageDesc').value = c.page_description || '';
+        document.getElementById('fPromoCode').value = c.promo_code || '';
+        if (c.logo_path) {
+          document.getElementById('logoLabel').textContent = 'Logo uploaded';
+          document.getElementById('clearLogoBtn').classList.remove('hidden');
+        } else {
+          document.getElementById('logoLabel').textContent = 'Upload Logo';
+          document.getElementById('clearLogoBtn').classList.add('hidden');
+        }
+        document.getElementById('downloadBtn').classList.remove('hidden');
+        loadQRPreview(c.id, c.slug);
+        updatePreview();
+        showView('create');
+      } catch (e) { console.error(e); }
+    }
+
+    async function saveQR() {
+      const btn = document.getElementById('saveBtn');
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+
+      const data = {
+        title: document.getElementById('fTitle').value,
+        qr_type: qrType,
+        redirect_url: document.getElementById('fRedirectUrl').value,
+        fg_color: document.getElementById('fFgColor').value,
+        bg_color: document.getElementById('fBgColor').value,
+        dot_shape: dotShape,
+        page_bg_color: document.getElementById('fPageBgColor').value,
+        page_bg_image: document.getElementById('fPageBgImg').value,
+        page_title: document.getElementById('fPageTitle').value,
+        page_description: document.getElementById('fPageDesc').value,
+        promo_code: document.getElementById('fPromoCode').value,
+      };
+
+      try {
+        const url = editingId ? `/api/qr/${editingId}` : '/api/qr';
+        const method = editingId ? 'PUT' : 'POST';
+        const res = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+        const c = await res.json();
+        editingId = c.id;
+        document.getElementById('editorTitle').textContent = 'Edit QR Code';
+        document.getElementById('downloadBtn').classList.remove('hidden');
+
+        // Upload logo if selected
+        const logoInput = document.getElementById('fLogo');
+        if (logoInput.files.length) {
+          const fd = new FormData();
+          fd.append('logo', logoInput.files[0]);
+          await fetch(`/api/qr/${c.id}/logo`, { method: 'POST', body: fd });
+        }
+
+        loadQRPreview(c.id, c.slug);
+        showToast('QR code saved successfully!', 'success');
+      } catch (e) {
+        showToast('Error saving QR code', 'error');
+      }
+      btn.disabled = false;
+      btn.textContent = 'Save QR Code';
+    }
+
+    async function deleteCode(id) {
+      if (!confirm('Delete this QR code?')) return;
+      try {
+        await fetch(`/api/qr/${id}`, { method: 'DELETE' });
+        showToast('QR code deleted', 'success');
+        loadCodes();
+      } catch (e) { showToast('Error deleting', 'error'); }
+    }
+
+    function downloadQR() {
+      if (!editingId) return;
+      const a = document.createElement('a');
+      a.href = `/api/qr/${editingId}/image`;
+      a.download = `qr-code-${editingId}.png`;
+      a.click();
+    }
+
+    function loadQRPreview(id, slug) {
+      const container = document.getElementById('qrPreview');
+      container.innerHTML = `<img src="/api/qr/${id}/image?t=${Date.now()}" alt="QR" class="w-full h-full object-contain" />`;
+      const slugEl = document.getElementById('qrSlugInfo');
+      slugEl.textContent = `URL: ${window.location.origin}/go/${slug}`;
+      slugEl.classList.remove('hidden');
+    }
+
+    // ── Dot shape ──
+    function setDotShape(shape) {
+      dotShape = shape;
+      document.querySelectorAll('.dot-btn').forEach(b => {
+        b.classList.toggle('glass-active', b.dataset.shape === shape);
+        b.classList.toggle('text-white', b.dataset.shape === shape);
+      });
+    }
+
+    // ── QR Type ──
+    function setQrType(type) {
+      qrType = type;
+      document.querySelectorAll('.qrtype-btn').forEach(b => {
+        b.classList.toggle('glass-active', b.dataset.qrtype === type);
+        b.classList.toggle('text-white', b.dataset.qrtype === type);
+      });
+      // Toggle sections
+      const isRedirect = type === 'redirect';
+      document.getElementById('redirectUrlWrap').classList.toggle('hidden', !isRedirect);
+      document.getElementById('landingPageSection').classList.toggle('hidden', isRedirect);
+      document.getElementById('landingPreviewSection').classList.toggle('hidden', isRedirect);
+      updatePreview();
+    }
+
+    // ── Logo ──
+    function onLogoChange(input) {
+      if (input.files.length) {
+        document.getElementById('logoLabel').textContent = input.files[0].name;
+        document.getElementById('clearLogoBtn').classList.remove('hidden');
+      }
+    }
+
+    function clearLogo() {
+      document.getElementById('fLogo').value = '';
+      document.getElementById('logoLabel').textContent = 'Upload Logo';
+      document.getElementById('clearLogoBtn').classList.add('hidden');
+    }
+
+    // ── Color sync ──
+    function setupColorSync() {
+      document.getElementById('fFgColor').addEventListener('input', e => {
+        document.getElementById('fFgHex').value = e.target.value;
+      });
+      document.getElementById('fBgColor').addEventListener('input', e => {
+        document.getElementById('fBgHex').value = e.target.value;
+      });
+    }
+    function syncColor(type) {
+      const hex = document.getElementById(type === 'fg' ? 'fFgHex' : 'fBgHex').value;
+      if (/^#[0-9A-Fa-f]{6}$/.test(hex)) {
+        document.getElementById(type === 'fg' ? 'fFgColor' : 'fBgColor').value = hex;
+      }
+    }
+    function syncPageBgColor() {
+      const hex = document.getElementById('fPageBgHex').value;
+      if (/^#[0-9A-Fa-f]{6}$/.test(hex)) {
+        document.getElementById('fPageBgColor').value = hex;
+        updatePreview();
+      }
+    }
+
+    // ── Live preview ──
+    function updatePreview() {
+      const prev = document.getElementById('livePreview');
+      const bgColor = document.getElementById('fPageBgColor').value || '#0f0c29';
+      const bgImg = document.getElementById('fPageBgImg').value;
+      prev.style.backgroundColor = bgColor;
+      prev.style.backgroundImage = bgImg ? `url('${bgImg}')` : 'none';
+      prev.style.backgroundSize = 'cover';
+      prev.style.backgroundPosition = 'center';
+
+      document.getElementById('prevTitle').textContent = document.getElementById('fPageTitle').value || 'Welcome!';
+      document.getElementById('prevDesc').textContent = document.getElementById('fPageDesc').value || 'Thanks for scanning!';
+      const promo = document.getElementById('fPromoCode').value;
+      document.getElementById('prevPromo').textContent = promo || 'CODE';
+      document.getElementById('prevPromoWrap').style.display = promo ? 'block' : 'none';
+    }
+
+    // ── Analytics ──
+    async function openAnalytics(id, title) {
+      showView('analytics');
+      document.getElementById('analyticsTitle').textContent = `Analytics — ${title}`;
+      try {
+        const res = await fetch(`/api/qr/${id}/stats`);
+        const s = await res.json();
+        document.getElementById('statScans').textContent = s.total_scans;
+        document.getElementById('statVisitors').textContent = s.unique_visitors;
+        document.getElementById('statCTR').textContent = s.ctr + '%';
+
+        // Chart
+        const labels = Object.keys(s.daily_scans);
+        const data = Object.values(s.daily_scans);
+        const ctx = document.getElementById('scansChart').getContext('2d');
+
+        if (scansChart) scansChart.destroy();
+
+        const gradient = ctx.createLinearGradient(0, 0, 0, 280);
+        gradient.addColorStop(0, 'rgba(139,92,246,0.3)');
+        gradient.addColorStop(1, 'rgba(139,92,246,0)');
+
+        scansChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: labels.map(d => { const dt = new Date(d); return `${dt.getMonth()+1}/${dt.getDate()}`; }),
+            datasets: [{
+              label: 'Scans',
+              data: data,
+              borderColor: '#8b5cf6',
+              backgroundColor: gradient,
+              fill: true,
+              tension: 0.4,
+              pointRadius: 0,
+              pointHoverRadius: 6,
+              pointHoverBackgroundColor: '#8b5cf6',
+              pointHoverBorderColor: '#fff',
+              pointHoverBorderWidth: 2,
+              borderWidth: 2,
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: 'rgba(15,13,24,0.9)',
+                titleColor: '#fff',
+                bodyColor: '#a5b4fc',
+                borderColor: 'rgba(139,92,246,0.3)',
+                borderWidth: 1,
+                padding: 12,
+                cornerRadius: 12,
+                displayColors: false,
+              }
+            },
+            scales: {
+              x: {
+                grid: { color: 'rgba(255,255,255,0.04)' },
+                ticks: { color: 'rgba(255,255,255,0.3)', font: { size: 10 }, maxTicksLimit: 8 },
+                border: { display: false },
+              },
+              y: {
+                grid: { color: 'rgba(255,255,255,0.04)' },
+                ticks: { color: 'rgba(255,255,255,0.3)', font: { size: 10 }, stepSize: 1 },
+                border: { display: false },
+                beginAtZero: true,
+              }
+            }
+          }
+        });
+      } catch (e) { console.error(e); }
+    }
+
+    // ── Toast ──
+    function showToast(msg, type) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = 'toast glass rounded-xl px-5 py-3 text-sm font-medium show';
+      if (type === 'success') t.classList.add('border-emerald-500/30');
+      else t.classList.add('border-red-500/30');
+      setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    // ── Helpers ──
+    function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+    // Set initial active nav
+    showView('codes');
+  </script>
+</body>
+</html>

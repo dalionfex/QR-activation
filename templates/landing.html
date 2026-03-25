@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ code.page_title or 'Welcome' }}</title>
+  <meta name="description" content="{{ code.page_description or 'Scan to discover!' }}" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter','system-ui','sans-serif'] } } } };
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      margin: 0;
+    }
+    .glass {
+      background: rgba(255,255,255,0.08);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+    .promo-box {
+      border: 2px dashed rgba(255,255,255,0.3);
+      background: rgba(255,255,255,0.05);
+    }
+    .copy-btn {
+      transition: all 0.2s ease;
+    }
+    .copy-btn:hover { transform: scale(1.05); }
+    .copy-btn:active { transform: scale(0.95); }
+    .fade-in { animation: fadeUp 0.6s ease-out both; }
+    .fade-in-delay { animation: fadeUp 0.6s ease-out 0.2s both; }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .float-anim {
+      animation: float 6s ease-in-out infinite;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    /* Animated gradient orbs */
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.3;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .orb-1 { width: 300px; height: 300px; background: #8b5cf6; top: -50px; right: -50px; animation: orbMove1 15s ease-in-out infinite; }
+    .orb-2 { width: 250px; height: 250px; background: #3b82f6; bottom: -30px; left: -30px; animation: orbMove2 18s ease-in-out infinite; }
+    @keyframes orbMove1 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-40px,60px)} }
+    @keyframes orbMove2 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(30px,-50px)} }
+  </style>
+</head>
+<body class="flex items-center justify-center p-4" style="background-color: {{ code.page_bg_color or '#0f0c29' }}; {% if code.page_bg_image %}background-image: url('{{ code.page_bg_image }}'); background-size: cover; background-position: center;{% endif %}">
+  <!-- Animated orbs -->
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+
+  <div class="relative z-10 w-full max-w-md mx-auto">
+    <!-- Main Card -->
+    <div class="glass rounded-3xl p-8 sm:p-10 text-center text-white fade-in">
+      <!-- Icon -->
+      <div class="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center mb-6 float-anim shadow-lg shadow-violet-500/20">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+        </svg>
+      </div>
+
+      <!-- Title -->
+      <h1 class="text-2xl sm:text-3xl font-extrabold mb-3 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+        {{ code.page_title or 'Welcome!' }}
+      </h1>
+
+      <!-- Description -->
+      <p class="text-gray-300 text-sm sm:text-base leading-relaxed mb-8">
+        {{ code.page_description or 'Thanks for scanning!' }}
+      </p>
+
+      {% if code.promo_code %}
+      <!-- Promo Code -->
+      <div class="fade-in-delay">
+        <p class="text-xs uppercase tracking-widest text-gray-400 mb-3 font-semibold">Your Promo Code</p>
+        <div class="promo-box rounded-2xl p-5 mb-4">
+          <span id="promoText" class="text-2xl sm:text-3xl font-black tracking-[0.15em] text-white">
+            {{ code.promo_code }}
+          </span>
+        </div>
+        <button id="copyBtn" onclick="copyPromo()" class="copy-btn w-full py-3 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-semibold text-sm shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40 transition-shadow">
+          <span id="copyLabel">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 inline mr-1.5 -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+            Copy Code
+          </span>
+        </button>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Powered by -->
+    <p class="text-center text-gray-600 text-xs mt-6 fade-in-delay">Powered by QR SaaS</p>
+  </div>
+
+  <script>
+    // Session ID for unique visitor tracking
+    (function() {
+      let sid = sessionStorage.getItem('qr_sid');
+      if (!sid) {
+        sid = 'sid_' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+        sessionStorage.setItem('qr_sid', sid);
+      }
+      // Log scan event on page load
+      fetch('/api/qr/{{ code.id }}/event', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ event: 'scan', session_id: sid }),
+      }).catch(() => {});
+    })();
+
+    function copyPromo() {
+      const text = document.getElementById('promoText').textContent.trim();
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById('copyBtn');
+        const label = document.getElementById('copyLabel');
+        label.innerHTML = `
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 inline mr-1.5 -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+          Copied!
+        `;
+        btn.classList.add('!from-emerald-500', '!to-green-500');
+        setTimeout(() => {
+          label.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 inline mr-1.5 -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+            Copy Code
+          `;
+          btn.classList.remove('!from-emerald-500', '!to-green-500');
+        }, 2000);
+
+        // Log copy event
+        const sid = sessionStorage.getItem('qr_sid') || '';
+        fetch('/api/qr/{{ code.id }}/event', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ event: 'copy_promo', session_id: sid }),
+        }).catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>

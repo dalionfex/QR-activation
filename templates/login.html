@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign In — QR SaaS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter','system-ui','sans-serif'] } } } };
+  </script>
+  <style>
+    body { background: linear-gradient(160deg,#07060b 0%,#13111c 40%,#1a1333 100%); }
+    .glass { background:rgba(255,255,255,0.04); backdrop-filter:blur(18px); border:1px solid rgba(255,255,255,0.08); }
+    .glow { box-shadow:0 0 80px rgba(139,92,246,0.15),0 0 160px rgba(59,130,246,0.05); }
+    .fade-in { animation:fadeUp .6s ease-out both; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+    .pulse-ring { animation: pulseRing 2s ease-out infinite; }
+    @keyframes pulseRing { 0%{box-shadow:0 0 0 0 rgba(139,92,246,0.4)} 70%{box-shadow:0 0 0 20px rgba(139,92,246,0)} 100%{box-shadow:0 0 0 0 rgba(139,92,246,0)} }
+    .tab-active { background: rgba(139,92,246,0.2); border-color: rgba(139,92,246,0.4); color: #fff; }
+    .tab-inactive { color: rgba(255,255,255,0.4); }
+    .tab-inactive:hover { color: rgba(255,255,255,0.7); }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4 font-sans text-white">
+  <div class="glass glow rounded-3xl max-w-sm w-full p-8 sm:p-10 text-center fade-in">
+    <!-- Logo -->
+    <div class="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center mb-6 pulse-ring">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+      </svg>
+    </div>
+
+    <h1 class="text-2xl font-extrabold mb-1">QR SaaS</h1>
+    <p class="text-gray-400 text-sm mb-6">Dynamic QR code management platform</p>
+
+    <!-- Tabs -->
+    <div class="flex gap-2 mb-6">
+      <button id="tabLogin" onclick="switchTab('login')" class="flex-1 py-2 rounded-xl border border-transparent text-sm font-semibold transition tab-active">Sign In</button>
+      <button id="tabRegister" onclick="switchTab('register')" class="flex-1 py-2 rounded-xl border border-transparent text-sm font-semibold transition tab-inactive">Register</button>
+    </div>
+
+    <!-- Error -->
+    <div id="errorBox" class="hidden mb-4 text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2.5"></div>
+
+    <!-- Login Form -->
+    <form id="formLogin" onsubmit="return handleLogin(event)" class="space-y-3 text-left">
+      <div>
+        <label class="block text-xs text-gray-400 mb-1">Email</label>
+        <input id="loginEmail" type="email" required placeholder="you@email.com" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20 transition placeholder-gray-600" />
+      </div>
+      <div>
+        <label class="block text-xs text-gray-400 mb-1">Password</label>
+        <input id="loginPassword" type="password" required minlength="6" placeholder="••••••••" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20 transition placeholder-gray-600" />
+      </div>
+      <button type="submit" class="w-full py-3 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-sm font-semibold hover:opacity-90 transition shadow-lg shadow-violet-500/20 mt-2">Sign In</button>
+    </form>
+
+    <!-- Register Form -->
+    <form id="formRegister" onsubmit="return handleRegister(event)" class="hidden space-y-3 text-left">
+      <div>
+        <label class="block text-xs text-gray-400 mb-1">Name</label>
+        <input id="regName" type="text" placeholder="Your name" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20 transition placeholder-gray-600" />
+      </div>
+      <div>
+        <label class="block text-xs text-gray-400 mb-1">Email</label>
+        <input id="regEmail" type="email" required placeholder="you@email.com" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20 transition placeholder-gray-600" />
+      </div>
+      <div>
+        <label class="block text-xs text-gray-400 mb-1">Password</label>
+        <input id="regPassword" type="password" required minlength="6" placeholder="Min 6 characters" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20 transition placeholder-gray-600" />
+      </div>
+      <button type="submit" class="w-full py-3 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-sm font-semibold hover:opacity-90 transition shadow-lg shadow-violet-500/20 mt-2">Create Account</button>
+    </form>
+
+    <!-- Divider -->
+    <div class="flex items-center gap-3 my-5">
+      <div class="flex-1 h-px bg-white/10"></div>
+      <span class="text-xs text-gray-500 uppercase tracking-wider">or</span>
+      <div class="flex-1 h-px bg-white/10"></div>
+    </div>
+
+    <!-- Demo login -->
+    <button onclick="demoLogin()" class="w-full py-3 rounded-xl bg-white/10 hover:bg-white/15 border border-white/10 text-sm font-semibold transition hover:scale-[1.02] active:scale-95">
+      Continue as Demo User
+    </button>
+
+    <p class="mt-6 text-xs text-gray-600">No sign-up required for demo</p>
+  </div>
+
+  <script>
+    function switchTab(tab) {
+      const tabLogin = document.getElementById('tabLogin');
+      const tabRegister = document.getElementById('tabRegister');
+      const formLogin = document.getElementById('formLogin');
+      const formRegister = document.getElementById('formRegister');
+      const errorBox = document.getElementById('errorBox');
+      errorBox.classList.add('hidden');
+
+      if (tab === 'login') {
+        tabLogin.className = 'flex-1 py-2 rounded-xl border border-transparent text-sm font-semibold transition tab-active';
+        tabRegister.className = 'flex-1 py-2 rounded-xl border border-transparent text-sm font-semibold transition tab-inactive';
+        formLogin.classList.remove('hidden');
+        formRegister.classList.add('hidden');
+      } else {
+        tabRegister.className = 'flex-1 py-2 rounded-xl border border-transparent text-sm font-semibold transition tab-active';
+        tabLogin.className = 'flex-1 py-2 rounded-xl border border-transparent text-sm font-semibold transition tab-inactive';
+        formRegister.classList.remove('hidden');
+        formLogin.classList.add('hidden');
+      }
+    }
+
+    function showError(msg) {
+      const box = document.getElementById('errorBox');
+      box.textContent = msg;
+      box.classList.remove('hidden');
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      document.getElementById('errorBox').classList.add('hidden');
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: document.getElementById('loginEmail').value,
+            password: document.getElementById('loginPassword').value,
+          }),
+        });
+        const data = await res.json();
+        if (data.ok) window.location.href = '/dashboard';
+        else showError(data.error || 'Login failed');
+      } catch (err) { showError('Connection error'); }
+      return false;
+    }
+
+    async function handleRegister(e) {
+      e.preventDefault();
+      document.getElementById('errorBox').classList.add('hidden');
+      try {
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: document.getElementById('regName').value,
+            email: document.getElementById('regEmail').value,
+            password: document.getElementById('regPassword').value,
+          }),
+        });
+        const data = await res.json();
+        if (data.ok) window.location.href = '/dashboard';
+        else showError(data.error || 'Registration failed');
+      } catch (err) { showError('Connection error'); }
+      return false;
+    }
+
+    function demoLogin() {
+      fetch('/api/auth/demo', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+          if (data.ok) window.location.href = '/dashboard';
+        });
+    }
+  </script>
+</body>
+</html>
