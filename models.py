@@ -119,6 +119,7 @@ class GlobalSettings(db.Model):
     platform_name = db.Column(db.String(128), default="QR SaaS")
     platform_logo_path = db.Column(db.String(512), default="")
     admin_message_show = db.Column(db.Boolean, default=False)
+    admin_message_show = db.Column(db.Boolean, default=False)
     admin_message_text = db.Column(db.String(512), default="Welcome to QR SaaS!")
     admin_message_icon = db.Column(db.String(512), default="")
     admin_message_btn_text = db.Column(db.String(64), default="View")

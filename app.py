@@ -27,12 +27,17 @@ from models import db, User, QRCode, ScanLog, GlobalSettings
 # ═══════════════════════════════════════════════════════════════════
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key-change-in-prod")
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///qr_saas.db"
+# Database config
+db_url = os.environ.get("DATABASE_URL", "sqlite:///qr_saas.db")
+if db_url.startswith("postgres://"):
+    db_url = db_url.replace("postgres://", "postgresql://", 1)
+app.config["SQLALCHEMY_DATABASE_URI"] = db_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["MAX_CONTENT_LENGTH"] = 4 * 1024 * 1024  # 4 MB upload limit
 
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "static", "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_DIR # Added for settings_logo route
 
 # Base URL for QR codes — set this to your public URL when deployed
 # e.g. export BASE_URL=https://yourdomain.com
@@ -59,7 +64,7 @@ def login_required(f):
         if "user_id" not in session:
             if request.path.startswith("/api/"):
                 return jsonify({"error": "unauthorized"}), 401
-            return redirect(url_for("login_page"))
+            return redirect(url_for("login")) # Changed to 'login'
         return f(*args, **kwargs)
     return decorated
 
@@ -74,6 +79,13 @@ def is_super_admin():
     u = current_user()
     return u is not None and u.email.lower() == SUPER_ADMIN_EMAIL
 
+def super_admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not is_super_admin():
+            abort(403)
+        return f(*args, **kwargs)
+    return decorated_function
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -100,7 +112,7 @@ def register():
 
 
 @app.route("/api/auth/login", methods=["POST"])
-def login():
+def login_api(): # Renamed to avoid conflict with login page route
     data = request.get_json(force=True)
     email = (data.get("email") or "").strip().lower()
     password = data.get("password") or ""
@@ -401,48 +413,50 @@ def get_settings():
     return jsonify(s.to_dict())
 
 
-@app.route("/api/settings", methods=["PUT"])
+@app.route('/api/settings', methods=['PUT'])
 @login_required
+@super_admin_required
 def update_settings():
-    if not is_super_admin():
-        abort(403)
-    data = request.get_json(force=True)
-    if "admin_message_btn_url" in data:
-        url = data["admin_message_btn_url"].strip()
-        if url and not url.startswith(("http://", "https://")):
-            data["admin_message_btn_url"] = "http://" + url
-            
+    data = request.json
     s = GlobalSettings.query.first()
     for field in ["platform_name", "admin_message_show", "admin_message_text", "admin_message_btn_text", "admin_message_btn_url"]:
         if field in data:
             setattr(s, field, data[field])
     db.session.commit()
-    return jsonify(s.to_dict())
+    return jsonify({"ok": True})
 
-
-@app.route("/api/settings/logo", methods=["POST"])
+@app.route('/api/settings/logo', methods=['POST', 'DELETE'])
 @login_required
-def upload_platform_logo():
-    if not is_super_admin():
-        abort(403)
-    f = request.files.get("logo")
-    if not f:
-        return jsonify({"error": "no file"}), 400
-    ext = f.filename.rsplit(".", 1)[-1].lower() if "." in f.filename else "png"
-    fname = f"platform_{uuid.uuid4().hex}.{ext}"
-    path = os.path.join(UPLOAD_DIR, fname)
-    f.save(path)
+@super_admin_required
+def settings_logo():
     s = GlobalSettings.query.first()
-    s.platform_logo_path = f"/static/uploads/{fname}"
+    if request.method == 'DELETE':
+        s.platform_logo_path = ""
+        db.session.commit()
+        return jsonify({"ok": True})
+    
+    if 'logo' not in request.files:
+        return jsonify({"error": "No file"}), 400
+    file = request.files['logo']
+    if file.filename == '':
+        return jsonify({"error": "No file"}), 400
+        
+    ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else 'png'
+    filename = f"platform_logo_{uuid.uuid4().hex}.{ext}"
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    file.save(filepath)
+    
+    s.platform_logo_path = f"/static/uploads/{filename}"
     db.session.commit()
-    return jsonify({"ok": True, "logo_path": s.platform_logo_path})
+    return jsonify({"ok": True, "logo_url": s.platform_logo_path})
 
 
 @app.route("/api/settings/icon", methods=["POST"])
 @login_required
+@super_admin_required # Added decorator
 def upload_platform_icon():
-    if not is_super_admin():
-        abort(403)
+    # if not is_super_admin(): # Removed check, replaced by decorator
+    #     abort(403)
     f = request.files.get("icon")
     if not f:
         return jsonify({"error": "no file"}), 400
@@ -458,9 +472,10 @@ def upload_platform_icon():
 
 @app.route("/api/admin/stats", methods=["GET"])
 @login_required
+@super_admin_required # Added decorator
 def admin_stats():
-    if not is_super_admin():
-        abort(403)
+    # if not is_super_admin(): # Removed check, replaced by decorator
+    #     abort(403)
     
     now = datetime.utcnow()
     today = now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -505,13 +520,13 @@ def admin_stats():
 def index():
     if "user_id" in session:
         return redirect(url_for("dashboard_page"))
-    return redirect(url_for("login_page"))
+    return redirect(url_for("login"))
 
 
-@app.route("/login")
-def login_page():
-    # Pass settings to template (e.g., for platform name on login page)
-    return render_template("login.html", settings=GlobalSettings.query.first())
+@app.route('/login')
+def login():
+    settings = GlobalSettings.query.first()
+    return render_template('login.html', settings=settings)
 
 
 @app.route("/dashboard")
@@ -557,5 +572,7 @@ if __name__ == '__main__':
                 cols = [c["name"] for c in inspector.get_columns("global_settings")]
                 if "admin_message_btn_text" not in cols:
                     conn.execute(text("ALTER TABLE global_settings ADD COLUMN admin_message_btn_text VARCHAR(64) DEFAULT 'View'"))
+                if "platform_logo_path" not in cols:
+                    conn.execute(text("ALTER TABLE global_settings ADD COLUMN platform_logo_path VARCHAR(512) DEFAULT ''"))
             conn.commit()
     app.run(host='0.0.0.0', port=5222, debug=True)

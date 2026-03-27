@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sign In — QR SaaS</title>
+  <title>Sign In — {{ settings.platform_name if settings else 'QR SaaS' }}</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <script>
@@ -25,13 +25,17 @@
 <body class="min-h-screen flex items-center justify-center p-4 font-sans text-white">
   <div class="glass glow rounded-3xl max-w-sm w-full p-8 sm:p-10 text-center fade-in">
     <!-- Logo -->
+    {% if settings and settings.platform_logo_path %}
+    <img src="{{ settings.platform_logo_path }}" alt="Logo" class="mx-auto max-h-16 object-contain drop-shadow-md mb-6 pulse-ring rounded-2xl" />
+    {% else %}
     <div class="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center mb-6 pulse-ring">
       <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
       </svg>
     </div>
+    {% endif %}
 
-    <h1 class="text-2xl font-extrabold mb-1">QR SaaS</h1>
+    <h1 class="text-2xl font-extrabold mb-1">{{ settings.platform_name if settings else 'QR SaaS' }}</h1>
     <p class="text-gray-400 text-sm mb-6">Dynamic QR code management platform</p>
 
     <!-- Tabs -->
