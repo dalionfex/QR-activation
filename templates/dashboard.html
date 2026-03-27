@@ -53,7 +53,7 @@
     <button onclick="toggleSidebar()" class="p-2 rounded-lg hover:bg-white/10 transition">
       <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
     </button>
-    <span class="font-bold text-sm">QR SaaS</span>
+    <span class="font-bold text-sm">{{ settings.platform_name }}</span>
     <div class="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600" id="mobileAvatar"></div>
   </header>
 
@@ -66,13 +66,17 @@
       <!-- Brand -->
       <div class="p-5 border-b border-white/5">
         <div class="flex items-center gap-3">
+          {% if settings.platform_logo_path %}
+          <img src="{{ settings.platform_logo_path }}" class="w-10 h-10 rounded-xl object-contain bg-white/5" />
+          {% else %}
           <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center flex-shrink-0">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
             </svg>
           </div>
+          {% endif %}
           <div>
-            <h1 class="font-bold text-sm">QR SaaS</h1>
+            <h1 class="font-bold text-sm">{{ settings.platform_name }}</h1>
             <p class="text-[10px] text-gray-500">Dynamic QR Manager</p>
           </div>
         </div>
@@ -88,6 +92,13 @@
           <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
           Create New
         </button>
+        {% if is_admin %}
+        <div class="h-px bg-white/5 my-2"></div>
+        <button onclick="showView('admin')" id="nav-admin" class="nav-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-violet-300 hover:text-white hover:bg-white/5 transition-all mt-2 border border-violet-500/20 bg-violet-500/5">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          Super Admin
+        </button>
+        {% endif %}
       </nav>
 
       <!-- User -->
@@ -108,7 +119,21 @@
     </aside>
 
     <!-- Main content -->
-    <main class="flex-1 lg:ml-0 pt-14 lg:pt-0 overflow-y-auto">
+    <main class="flex-1 lg:ml-0 pt-14 lg:pt-0 overflow-y-auto flex flex-col">
+      <!-- Admin Message Bar -->
+      {% if settings.admin_message_show %}
+      <div class="bg-gradient-to-r from-violet-600/20 to-indigo-600/20 border-b border-indigo-500/20 px-6 py-3 flex items-center justify-between backdrop-blur-md flex-shrink-0 z-10 w-full relative">
+        <div class="flex items-center gap-3">
+          {% if settings.admin_message_icon %}
+          <img src="{{ settings.admin_message_icon }}" alt="icon" class="w-6 h-6 object-contain drop-shadow" />
+          {% endif %}
+          <span class="text-sm font-semibold text-white drop-shadow-sm">{{ settings.admin_message_text }}</span>
+        </div>
+        {% if settings.admin_message_btn_url %}
+        <a href="{{ settings.admin_message_btn_url }}" target="_blank" class="px-4 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-bold text-white transition ring-1 ring-white/10 shadow-sm">{{ settings.admin_message_btn_text }}</a>
+        {% endif %}
+      </div>
+      {% endif %}
       <!-- ─────── VIEW: My Codes ─────── -->
       <div id="view-codes" class="view p-6 lg:p-8 max-w-6xl mx-auto">
         <div class="flex items-center justify-between mb-8">
@@ -223,15 +248,56 @@
                   <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
               </div>
+              <div class="mt-3 hidden items-center flex-wrap gap-4" id="logoSettingsPanel">
+                <label class="flex items-center gap-2 text-xs text-gray-400 cursor-pointer group">
+                  <div class="relative w-4 h-4 rounded ring-1 ring-white/20 bg-black/20 group-hover:ring-white/40 flex items-center justify-center transition">
+                    <input type="checkbox" id="fLogoTransparent" class="opacity-0 absolute inset-0 cursor-pointer peer" />
+                    <svg class="w-3 h-3 text-violet-400 scale-0 peer-checked:scale-100 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                  </div>Transparent Bg
+                </label>
+                <label class="flex items-center gap-2 text-xs text-gray-400 cursor-pointer group">
+                  <div class="relative w-4 h-4 rounded ring-1 ring-white/20 bg-black/20 group-hover:ring-white/40 flex items-center justify-center transition">
+                    <input type="checkbox" id="fLogoRounded" class="opacity-0 absolute inset-0 cursor-pointer peer" />
+                    <svg class="w-3 h-3 text-violet-400 scale-0 peer-checked:scale-100 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                  </div>Rounded Cutout
+                </label>
+              </div>
             </div>
 
             <!-- Landing Page Builder (hidden when type=redirect) -->
             <div id="landingPageSection" class="glass rounded-2xl p-5 glow-sm">
               <h3 class="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-4">Landing Page</h3>
               <div class="space-y-4">
+                <div>
+                  <label class="block text-xs text-gray-400 mb-1.5">Top Logo</label>
+                  <div class="flex items-center gap-3">
+                    <label class="flex-1 flex items-center justify-center gap-2 py-2 text-xs rounded-xl border border-dashed border-white/20 bg-white/5 hover:bg-white/10 transition cursor-pointer">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg> 
+                      <span id="landingLogoLabel">Upload Logo</span>
+                      <input id="fLandingLogo" type="file" accept="image/*" class="hidden" onchange="onLandingLogoChange(this)" />
+                    </label>
+                    <button id="clearLandingLogoBtn" onclick="clearLandingLogo()" class="hidden p-2 rounded-lg hover:bg-white/10 text-gray-500 hover:text-red-400 transition" title="Remove logo">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                  </div>
+                  <div class="mt-3 flex items-center flex-wrap gap-4" id="landingLogoSettingsPanel">
+                    <label class="flex items-center gap-2 text-xs text-gray-400 cursor-pointer group hidden" id="landingLogoRoundedWrap">
+                      <div class="relative w-4 h-4 rounded ring-1 ring-white/20 bg-black/20 group-hover:ring-white/40 flex items-center justify-center transition">
+                        <input type="checkbox" id="fLandingLogoRounded" class="opacity-0 absolute inset-0 cursor-pointer peer" onchange="updatePreview()" />
+                        <svg class="w-3 h-3 text-violet-400 scale-0 peer-checked:scale-100 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                      </div>Rounded Shape
+                    </label>
+                    <label class="flex items-center gap-2 text-xs text-gray-400 cursor-pointer group">
+                      <div class="relative w-4 h-4 rounded ring-1 ring-white/20 bg-black/20 group-hover:ring-white/40 flex items-center justify-center transition">
+                        <input type="checkbox" id="fHideLandingLogo" class="opacity-0 absolute inset-0 cursor-pointer peer" onchange="updatePreview()" />
+                        <svg class="w-3 h-3 text-violet-400 scale-0 peer-checked:scale-100 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                      </div>Hide Entire Logo
+                    </label>
+                  </div>
+                </div>
                 <div class="grid grid-cols-2 gap-4">
                   <div>
-                    <label class="block text-xs text-gray-400 mb-1.5">Background Color</label>
+                    <label class="block text-xs text-gray-400 mb-1.5">Page Background</label>
                     <div class="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2">
                       <input id="fPageBgColor" type="color" value="#0f0c29" class="w-8 h-8 rounded-lg" oninput="updatePreview()" />
                       <input id="fPageBgHex" type="text" value="#0f0c29" maxlength="7" class="flex-1 bg-transparent text-sm font-mono focus:outline-none" oninput="syncPageBgColor()" />
@@ -240,6 +306,22 @@
                   <div>
                     <label class="block text-xs text-gray-400 mb-1.5">Background Image</label>
                     <input id="fPageBgImg" type="text" placeholder="https://..." class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-violet-500/50 transition placeholder-gray-600" oninput="updatePreview()" />
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-xs text-gray-400 mb-1.5">Button Color</label>
+                    <div class="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2">
+                      <input id="fBtnBgColor" type="color" value="#8b5cf6" class="w-8 h-8 rounded-lg" oninput="updatePreview()" />
+                      <input id="fBtnBgHex" type="text" value="#8b5cf6" maxlength="7" class="flex-1 bg-transparent text-sm font-mono focus:outline-none" oninput="syncBtnColors('bg')" />
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-xs text-gray-400 mb-1.5">Button Text</label>
+                    <div class="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2">
+                      <input id="fBtnTextColor" type="color" value="#ffffff" class="w-8 h-8 rounded-lg" oninput="updatePreview()" />
+                      <input id="fBtnTextHex" type="text" value="#ffffff" maxlength="7" class="flex-1 bg-transparent text-sm font-mono focus:outline-none" oninput="syncBtnColors('text')" />
+                    </div>
                   </div>
                 </div>
                 <div>
@@ -284,20 +366,25 @@
             <div id="landingPreviewSection" class="glass rounded-2xl p-5 glow-sm">
               <h3 class="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-4">Landing Page Preview</h3>
               <div class="preview-phone mx-auto">
-                <div id="livePreview" class="w-full h-full flex items-center justify-center p-5 text-center" style="background-color:#0f0c29;">
-                  <div>
-                    <div class="mx-auto w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center mb-4">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
+                <div id="livePreview" class="w-full h-full flex items-center justify-center p-4 text-center relative" style="background-color:#0f0c29;">
+                  
+                  <div class="w-full p-4 rounded-xl glass bg-black/40 border border-white/20 backdrop-blur-md relative z-10 shadow-2xl">
+                    <img id="prevTopLogo" src="" class="hidden mx-auto max-h-10 object-contain mb-3" />
+                    <div id="prevTopIcon" class="mx-auto w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center mb-3">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
                     </div>
-                    <h4 id="prevTitle" class="text-lg font-extrabold text-white mb-2">Welcome!</h4>
-                    <p id="prevDesc" class="text-xs text-gray-300 mb-4 leading-relaxed">Thanks for scanning!</p>
+                    
+                    <h4 id="prevTitle" class="text-base font-extrabold text-white mb-1.5 leading-tight">Welcome!</h4>
+                    <p id="prevDesc" class="text-[10px] text-gray-300 mb-3 leading-relaxed">Thanks for scanning!</p>
+                    
                     <div id="prevPromoWrap" class="mb-3">
-                      <p class="text-[9px] uppercase tracking-widest text-gray-400 mb-1.5 font-semibold">Promo Code</p>
-                      <div class="border border-dashed border-white/20 rounded-xl py-3 px-4 bg-white/5">
-                        <span id="prevPromo" class="text-base font-black tracking-wider text-white">PROMO2026</span>
+                      <p class="text-[8px] uppercase tracking-widest text-gray-400 mb-1 font-semibold">Promo Code</p>
+                      <div class="border border-dashed border-white/20 rounded-lg py-2 px-3 bg-white/5">
+                        <span id="prevPromo" class="text-sm font-black tracking-wider text-white">PROMO2026</span>
                       </div>
                     </div>
-                    <div class="py-2 px-4 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 text-xs font-semibold text-white inline-block">Copy Code</div>
+                    
+                    <div id="prevBtn" class="py-1.5 px-4 rounded-lg text-xs font-semibold inline-block cursor-pointer" style="background-color: #8b5cf6; color: #ffffff;">Copy Code</div>
                   </div>
                 </div>
               </div>
@@ -339,6 +426,76 @@
           </div>
         </div>
       </div>
+
+      <!-- ─────── VIEW: Super Admin ─────── -->
+      {% if is_admin %}
+      <div id="view-admin" class="view hidden p-6 lg:p-8 max-w-6xl mx-auto">
+        <h2 class="text-2xl font-bold mb-6 text-violet-400 flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+          Super Admin Control Panel
+        </h2>
+
+        <!-- Admin Stats -->
+        <div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8" id="adminStatsGrid">
+          <!-- Filled by JS -->
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <!-- Global Settings -->
+          <div class="glass rounded-2xl p-6 glow-sm">
+            <h3 class="text-lg font-bold mb-4 border-b border-white/5 pb-2">Platform Settings</h3>
+            <div class="space-y-4">
+              <div>
+                <label class="block text-xs text-gray-400 mb-1.5">Platform Name</label>
+                <input id="fSettingsName" type="text" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-violet-500/50" value="{{ settings.platform_name }}" />
+              </div>
+
+              <div>
+                <label class="block text-xs text-gray-400 mb-1.5">Admin Message Bar (Shown to all users)</label>
+                <div class="bg-black/20 p-4 rounded-xl space-y-3 border border-white/5">
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm font-medium">Show Message Bar</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" id="fSettingsMsgShow" class="sr-only peer" {% if settings.admin_message_show %}checked{% endif %}>
+                      <div class="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-violet-600"></div>
+                    </label>
+                  </div>
+                  <input id="fSettingsMsgText" type="text" placeholder="Message text..." class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-violet-500/50" value="{{ settings.admin_message_text }}" />
+                  <div class="flex gap-2">
+                    <input id="fSettingsMsgBtnText" type="text" placeholder="Button text (e.g. View)" class="flex-[1] bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-violet-500/50" value="{{ settings.admin_message_btn_text }}" />
+                    <input id="fSettingsMsgUrl" type="text" placeholder="Button URL (optional)" class="flex-[2] bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-violet-500/50" value="{{ settings.admin_message_btn_url }}" />
+                  </div>
+                  
+                  <div class="flex gap-2">
+                    <label class="flex-1 flex items-center justify-center gap-2 py-2 text-xs rounded-xl border border-dashed border-white/20 bg-white/5 hover:bg-white/10 transition cursor-pointer">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                      <span id="platformLogoLabel">Update Platform Logo</span>
+                      <input id="fPlatformLogo" type="file" accept="image/*" class="hidden" onchange="uploadAdminLogo('logo', this)" />
+                    </label>
+                    <label class="flex-1 flex items-center justify-center gap-2 py-2 text-xs rounded-xl border border-dashed border-white/20 bg-white/5 hover:bg-white/10 transition cursor-pointer">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                      <span id="platformIconLabel">Update Message Bar Icon</span>
+                      <input id="fPlatformIcon" type="file" accept="image/*" class="hidden" onchange="uploadAdminLogo('icon', this)" />
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <button onclick="saveAdminSettings()" class="w-full py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-sm font-semibold transition mt-2">Save Settings</button>
+            </div>
+          </div>
+
+          <!-- Users List -->
+          <div class="glass rounded-2xl p-6 glow-sm flex flex-col h-[500px]">
+            <h3 class="text-lg font-bold mb-4 border-b border-white/5 pb-2">Registered Users</h3>
+            <div class="overflow-y-auto flex-1 pr-2 space-y-3" id="adminUsersList">
+              <!-- Filled by JS -->
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
     </main>
   </div>
 
@@ -377,6 +534,7 @@
 
       if (name === 'codes') { loadCodes(); }
       if (name === 'create' && !editingId) { resetForm(); }
+      if (name === 'admin') { loadAdminStats(); }
       // Close mobile sidebar
       const sb = document.getElementById('sidebar');
       if (!sb.classList.contains('-translate-x-full') && window.innerWidth < 1024) toggleSidebar();
@@ -458,11 +616,26 @@
       setDotShape('square');
       document.getElementById('fPageBgColor').value = '#0f0c29'; document.getElementById('fPageBgHex').value = '#0f0c29';
       document.getElementById('fPageBgImg').value = '';
+      document.getElementById('fBtnBgColor').value = '#8b5cf6'; document.getElementById('fBtnBgHex').value = '#8b5cf6';
+      document.getElementById('fBtnTextColor').value = '#ffffff'; document.getElementById('fBtnTextHex').value = '#ffffff';
       document.getElementById('fPageTitle').value = 'Welcome!';
       document.getElementById('fPageDesc').value = 'Thanks for scanning!';
-      document.getElementById('fPromoCode').value = 'PROMO2026';
+      document.getElementById('promoCode').value = 'PROMO2026';
+      
+      document.getElementById('fLogoTransparent').checked = false;
+      document.getElementById('fLogoRounded').checked = false;
+      document.getElementById('fLandingLogoRounded').checked = false;
+      document.getElementById('fHideLandingLogo').checked = false;
+      
       document.getElementById('logoLabel').textContent = 'Upload Logo';
+      document.getElementById('landingLogoLabel').textContent = 'Upload Logo';
+      document.getElementById('clearLandingLogoBtn').classList.add('hidden');
+      document.getElementById('landingLogoRoundedWrap').classList.add('hidden');
+      document.getElementById('prevTopLogo').classList.add('hidden');
+      document.getElementById('prevTopIcon').classList.remove('hidden');
       document.getElementById('clearLogoBtn').classList.add('hidden');
+      document.getElementById('logoSettingsPanel').classList.remove('flex');
+      document.getElementById('logoSettingsPanel').classList.add('hidden');
       document.getElementById('downloadBtn').classList.add('hidden');
       document.getElementById('qrPreview').innerHTML = '<p class="text-xs text-gray-600">Save to generate</p>';
       document.getElementById('qrSlugInfo').classList.add('hidden');
@@ -485,15 +658,41 @@
         setDotShape(c.dot_shape || 'square');
         document.getElementById('fPageBgColor').value = c.page_bg_color || '#0f0c29'; document.getElementById('fPageBgHex').value = c.page_bg_color || '#0f0c29';
         document.getElementById('fPageBgImg').value = c.page_bg_image || '';
+        document.getElementById('fBtnBgColor').value = c.button_bg_color || '#8b5cf6'; document.getElementById('fBtnBgHex').value = c.button_bg_color || '#8b5cf6';
+        document.getElementById('fBtnTextColor').value = c.button_text_color || '#ffffff'; document.getElementById('fBtnTextHex').value = c.button_text_color || '#ffffff';
         document.getElementById('fPageTitle').value = c.page_title || '';
         document.getElementById('fPageDesc').value = c.page_description || '';
         document.getElementById('fPromoCode').value = c.promo_code || '';
+        
+        document.getElementById('fLogoTransparent').checked = c.logo_transparent || false;
+        document.getElementById('fLogoRounded').checked = c.logo_rounded || false;
+        document.getElementById('fLandingLogoRounded').checked = c.landing_logo_rounded || false;
+        document.getElementById('fHideLandingLogo').checked = c.hide_landing_logo || false;
+
+        if (c.landing_logo_path) {
+          document.getElementById('landingLogoLabel').textContent = 'Logo uploaded';
+          document.getElementById('clearLandingLogoBtn').classList.remove('hidden');
+          document.getElementById('landingLogoRoundedWrap').classList.remove('hidden');
+          document.getElementById('prevTopLogo').src = c.landing_logo_path;
+          document.getElementById('prevTopLogo').classList.remove('hidden');
+          document.getElementById('prevTopIcon').classList.add('hidden');
+        } else {
+          document.getElementById('landingLogoLabel').textContent = 'Upload Logo';
+          document.getElementById('clearLandingLogoBtn').classList.add('hidden');
+          document.getElementById('landingLogoRoundedWrap').classList.add('hidden');
+          document.getElementById('prevTopLogo').classList.add('hidden');
+          document.getElementById('prevTopIcon').classList.remove('hidden');
+        }
         if (c.logo_path) {
           document.getElementById('logoLabel').textContent = 'Logo uploaded';
           document.getElementById('clearLogoBtn').classList.remove('hidden');
+          document.getElementById('logoSettingsPanel').classList.remove('hidden');
+          document.getElementById('logoSettingsPanel').classList.add('flex');
         } else {
           document.getElementById('logoLabel').textContent = 'Upload Logo';
           document.getElementById('clearLogoBtn').classList.add('hidden');
+          document.getElementById('logoSettingsPanel').classList.remove('flex');
+          document.getElementById('logoSettingsPanel').classList.add('hidden');
         }
         document.getElementById('downloadBtn').classList.remove('hidden');
         loadQRPreview(c.id, c.slug);
@@ -519,6 +718,14 @@
         page_title: document.getElementById('fPageTitle').value,
         page_description: document.getElementById('fPageDesc').value,
         promo_code: document.getElementById('fPromoCode').value,
+        button_bg_color: document.getElementById('fBtnBgColor').value,
+        button_text_color: document.getElementById('fBtnTextColor').value,
+        logo_transparent: document.getElementById('fLogoTransparent').checked,
+        logo_rounded: document.getElementById('fLogoRounded').checked,
+        landing_logo_rounded: document.getElementById('fLandingLogoRounded').checked,
+        hide_landing_logo: document.getElementById('fHideLandingLogo').checked,
+        logo_path: document.getElementById('clearLogoBtn').classList.contains('hidden') ? "" : undefined,
+        landing_logo_path: document.getElementById('clearLandingLogoBtn').classList.contains('hidden') ? "" : undefined,
       };
 
       try {
@@ -540,6 +747,14 @@
           const fd = new FormData();
           fd.append('logo', logoInput.files[0]);
           await fetch(`/api/qr/${c.id}/logo`, { method: 'POST', body: fd });
+        }
+
+        // Upload landing logo
+        const lLogoInput = document.getElementById('fLandingLogo');
+        if (lLogoInput.files.length) {
+          const lfd = new FormData();
+          lfd.append('logo', lLogoInput.files[0]);
+          await fetch(`/api/qr/${c.id}/landing_logo`, { method: 'POST', body: lfd });
         }
 
         loadQRPreview(c.id, c.slug);
@@ -647,11 +862,37 @@
       prev.style.backgroundSize = 'cover';
       prev.style.backgroundPosition = 'center';
 
+      const prevTopLogo = document.getElementById('prevTopLogo');
+      if (document.getElementById('fLandingLogoRounded').checked) {
+        prevTopLogo.classList.add('rounded-full', 'overflow-hidden');
+      } else {
+        prevTopLogo.classList.remove('rounded-full', 'overflow-hidden');
+      }
+      
+      const hideLogo = document.getElementById('fHideLandingLogo').checked;
+      const prevTopIcon = document.getElementById('prevTopIcon');
+      if (hideLogo) {
+        prevTopLogo.style.display = 'none';
+        prevTopIcon.style.display = 'none';
+      } else {
+        if (!document.getElementById('fLandingLogo').value && !prevTopLogo.src.startsWith('http') && prevTopLogo.src.length < 50) {
+          prevTopIcon.style.display = 'flex';
+          prevTopLogo.style.display = 'none';
+        } else {
+          prevTopIcon.style.display = 'none';
+          prevTopLogo.style.display = 'block';
+        }
+      }
+
       document.getElementById('prevTitle').textContent = document.getElementById('fPageTitle').value || 'Welcome!';
       document.getElementById('prevDesc').textContent = document.getElementById('fPageDesc').value || 'Thanks for scanning!';
       const promo = document.getElementById('fPromoCode').value;
       document.getElementById('prevPromo').textContent = promo || 'CODE';
       document.getElementById('prevPromoWrap').style.display = promo ? 'block' : 'none';
+
+      const btn = document.getElementById('prevBtn');
+      btn.style.backgroundColor = document.getElementById('fBtnBgColor').value || '#8b5cf6';
+      btn.style.color = document.getElementById('fBtnTextColor').value || '#ffffff';
     }
 
     // ── Analytics ──
@@ -728,6 +969,116 @@
           }
         });
       } catch (e) { console.error(e); }
+    }
+
+    // ── Super Admin ──
+    async function loadAdminStats() {
+      try {
+        const res = await fetch('/api/admin/stats');
+        const data = await res.json();
+        
+        // Stats grid
+        document.getElementById('adminStatsGrid').innerHTML = `
+          <div class="glass rounded-2xl p-4 border border-white/5">
+            <p class="text-xs text-gray-400 mb-1">Today</p>
+            <p class="text-2xl font-bold">${data.qrs.today}</p>
+          </div>
+          <div class="glass rounded-2xl p-4 border border-white/5">
+            <p class="text-xs text-gray-400 mb-1">Week</p>
+            <p class="text-2xl font-bold">${data.qrs.week}</p>
+          </div>
+          <div class="glass rounded-2xl p-4 border border-white/5">
+            <p class="text-xs text-gray-400 mb-1">Month</p>
+            <p class="text-2xl font-bold">${data.qrs.month}</p>
+          </div>
+          <div class="glass rounded-2xl p-4 border border-white/5">
+            <p class="text-xs text-gray-400 mb-1">Year</p>
+            <p class="text-2xl font-bold">${data.qrs.year}</p>
+          </div>
+          <div class="glass rounded-2xl p-4 border border-white/5">
+            <p class="text-xs text-gray-400 mb-1">All Time</p>
+            <p class="text-2xl font-bold">${data.qrs.all_time}</p>
+          </div>
+          <div class="glass rounded-2xl p-4 border border-white/5">
+            <p class="text-xs text-gray-400 mb-1">Users</p>
+            <p class="text-2xl font-bold">${data.active_users}</p>
+          </div>
+        `;
+
+        // Users list
+        document.getElementById('adminUsersList').innerHTML = data.users_list.map(u => `
+          <div class="glass rounded-xl p-3 flex justify-between items-center text-sm border border-white/5">
+            <div>
+              <p class="font-semibold">${esc(u.name)} <span class="text-xs text-gray-500 font-normal">(${esc(u.email)})</span></p>
+              <p class="text-[10px] text-gray-400">Registered: ${new Date(u.created_at).toLocaleDateString()}</p>
+            </div>
+            <div class="text-xs bg-white/5 px-2 py-1 rounded-lg border border-white/10">${u.qrs_count} QRs</div>
+          </div>
+        `).join('');
+      } catch (e) {
+        showToast('Error loading stats', 'error');
+      }
+    }
+
+    async function saveAdminSettings() {
+      try {
+        await fetch('/api/settings', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            platform_name: document.getElementById('fSettingsName').value,
+            admin_message_show: document.getElementById('fSettingsMsgShow').checked,
+            admin_message_text: document.getElementById('fSettingsMsgText').value,
+            admin_message_btn_text: document.getElementById('fSettingsMsgBtnText').value,
+            admin_message_btn_url: document.getElementById('fSettingsMsgUrl').value
+          })
+        });
+        showToast('Settings saved (refresh to apply)', 'success');
+      } catch (e) { showToast('Error saving settings', 'error'); }
+    }
+
+    async function uploadAdminLogo(type, input) {
+      if (!input.files.length) return;
+      const fd = new FormData();
+      fd.append(type, input.files[0]);
+      try {
+        await fetch(`/api/settings/${type}`, { method: 'POST', body: fd });
+        showToast('Uploaded! Refresh to see changes', 'success');
+      } catch (e) { showToast('Upload failed', 'error'); }
+    }
+
+    function onLandingLogoChange(input) {
+      if (input.files.length) {
+        document.getElementById('landingLogoLabel').textContent = input.files[0].name;
+        document.getElementById('clearLandingLogoBtn').classList.remove('hidden');
+        document.getElementById('landingLogoRoundedWrap').classList.remove('hidden');
+        const reader = new FileReader();
+        reader.onload = e => {
+          document.getElementById('prevTopLogo').src = e.target.result;
+          document.getElementById('prevTopLogo').classList.remove('hidden');
+          document.getElementById('prevTopIcon').classList.add('hidden');
+        };
+        reader.readAsDataURL(input.files[0]);
+      }
+    }
+
+    function clearLandingLogo() {
+      document.getElementById('fLandingLogo').value = '';
+      document.getElementById('landingLogoLabel').textContent = 'Upload Logo';
+      document.getElementById('clearLandingLogoBtn').classList.add('hidden');
+      document.getElementById('landingLogoRoundedWrap').classList.add('hidden');
+      document.getElementById('prevTopLogo').style.display = 'none';
+      if (!document.getElementById('fHideLandingLogo').checked) {
+        document.getElementById('prevTopIcon').style.display = 'flex';
+      }
+    }
+
+    function syncBtnColors(type) {
+      const hex = document.getElementById(type === 'bg' ? 'fBtnBgHex' : 'fBtnTextHex').value;
+      if (/^#[0-9A-Fa-f]{6}$/.test(hex)) {
+        document.getElementById(type === 'bg' ? 'fBtnBgColor' : 'fBtnTextColor').value = hex;
+        updatePreview();
+      }
     }
 
     // ── Toast ──

@@ -66,36 +66,44 @@
 
   <div class="relative z-10 w-full max-w-md mx-auto">
     <!-- Main Card -->
-    <div class="glass rounded-3xl p-8 sm:p-10 text-center text-white fade-in">
-      <!-- Icon -->
+    <div class="glass bg-black/40 rounded-3xl p-8 sm:p-10 text-center text-white fade-in shadow-2xl relative">
+      <!-- Top Logo / Icon -->
+      {% if not code.hide_landing_logo %}
+      {% if code.landing_logo_path %}
+      <div class="mx-auto mb-6 float-anim">
+        <img src="{{ code.landing_logo_path }}" alt="Logo" class="mx-auto max-h-16 object-contain drop-shadow-md {% if code.landing_logo_rounded %}rounded-full overflow-hidden{% endif %}" />
+      </div>
+      {% else %}
       <div class="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center mb-6 float-anim shadow-lg shadow-violet-500/20">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
         </svg>
       </div>
+      {% endif %}
+      {% endif %}
 
       <!-- Title -->
-      <h1 class="text-2xl sm:text-3xl font-extrabold mb-3 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+      <h1 class="text-2xl sm:text-3xl font-extrabold mb-3 text-white drop-shadow-sm leading-tight">
         {{ code.page_title or 'Welcome!' }}
       </h1>
 
       <!-- Description -->
-      <p class="text-gray-300 text-sm sm:text-base leading-relaxed mb-8">
+      <p class="text-gray-200 text-sm sm:text-base leading-relaxed mb-8 drop-shadow-sm">
         {{ code.page_description or 'Thanks for scanning!' }}
       </p>
 
       {% if code.promo_code %}
       <!-- Promo Code -->
       <div class="fade-in-delay">
-        <p class="text-xs uppercase tracking-widest text-gray-400 mb-3 font-semibold">Your Promo Code</p>
-        <div class="promo-box rounded-2xl p-5 mb-4">
-          <span id="promoText" class="text-2xl sm:text-3xl font-black tracking-[0.15em] text-white">
+        <p class="text-xs uppercase tracking-widest text-gray-400 mb-3 font-semibold drop-shadow-sm">Your Promo Code</p>
+        <div class="promo-box rounded-2xl p-5 mb-4 shadow-inner">
+          <span id="promoText" class="text-2xl sm:text-3xl font-black tracking-[0.15em] text-white drop-shadow-md">
             {{ code.promo_code }}
           </span>
         </div>
-        <button id="copyBtn" onclick="copyPromo()" class="copy-btn w-full py-3 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-semibold text-sm shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40 transition-shadow">
-          <span id="copyLabel">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 inline mr-1.5 -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <button id="copyBtn" onclick="copyPromo()" class="copy-btn w-full py-3.5 rounded-xl font-bold text-sm shadow-xl transition-all" style="background-color: {{ code.button_bg_color or '#8b5cf6' }}; color: {{ code.button_text_color or '#ffffff' }}; border: 1px solid rgba(255,255,255,0.1);">
+          <span id="copyLabel" class="flex items-center justify-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
             </svg>
             Copy Code
@@ -136,15 +144,16 @@
           </svg>
           Copied!
         `;
-        btn.classList.add('!from-emerald-500', '!to-green-500');
+        const originalBg = btn.style.backgroundColor;
+        btn.style.backgroundColor = '#10b981'; // emerald-500
         setTimeout(() => {
           label.innerHTML = `
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 inline mr-1.5 -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
             </svg>
             Copy Code
           `;
-          btn.classList.remove('!from-emerald-500', '!to-green-500');
+          btn.style.backgroundColor = originalBg;
         }, 2000);
 
         // Log copy event

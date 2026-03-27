@@ -20,7 +20,7 @@ from flask import (
     session, redirect, url_for, send_file, abort,
 )
 
-from models import db, User, QRCode, ScanLog
+from models import db, User, QRCode, ScanLog, GlobalSettings
 
 # ═══════════════════════════════════════════════════════════════════
 # App config
@@ -42,6 +42,12 @@ db.init_app(app)
 
 with app.app_context():
     db.create_all()
+    if not GlobalSettings.query.first():
+        db.session.add(GlobalSettings())
+        db.session.commit()
+
+# Constants
+SUPER_ADMIN_EMAIL = "dalionfex@gmail.com"
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -64,6 +70,11 @@ def current_user():
         return db.session.get(User, uid)
     return None
 
+def is_super_admin():
+    u = current_user()
+    return u is not None and u.email.lower() == SUPER_ADMIN_EMAIL
+
+
 
 # ═══════════════════════════════════════════════════════════════════
 # Auth routes
@@ -85,7 +96,7 @@ def register():
     db.session.add(user)
     db.session.commit()
     session["user_id"] = user.id
-    return jsonify({"ok": True, "user": {"id": user.id, "name": user.name, "email": user.email, "avatar": user.avatar_url}})
+    return jsonify({"ok": True, "user": {"id": user.id, "name": user.name, "email": user.email, "avatar": user.avatar_url, "is_admin": user.email.lower() == SUPER_ADMIN_EMAIL}})
 
 
 @app.route("/api/auth/login", methods=["POST"])
@@ -99,7 +110,7 @@ def login():
     if not user or not user.check_password(password):
         return jsonify({"error": "Invalid email or password"}), 401
     session["user_id"] = user.id
-    return jsonify({"ok": True, "user": {"id": user.id, "name": user.name, "email": user.email, "avatar": user.avatar_url}})
+    return jsonify({"ok": True, "user": {"id": user.id, "name": user.name, "email": user.email, "avatar": user.avatar_url, "is_admin": user.email.lower() == SUPER_ADMIN_EMAIL}})
 
 
 @app.route("/api/auth/demo", methods=["POST"])
@@ -112,14 +123,14 @@ def demo_auth():
         db.session.add(user)
         db.session.commit()
     session["user_id"] = user.id
-    return jsonify({"ok": True, "user": {"id": user.id, "name": user.name, "email": user.email, "avatar": user.avatar_url}})
+    return jsonify({"ok": True, "user": {"id": user.id, "name": user.name, "email": user.email, "avatar": user.avatar_url, "is_admin": False}})
 
 
 @app.route("/api/auth/me")
 @login_required
 def auth_me():
     u = current_user()
-    return jsonify({"id": u.id, "name": u.name, "email": u.email, "avatar": u.avatar_url})
+    return jsonify({"id": u.id, "name": u.name, "email": u.email, "avatar": u.avatar_url, "is_admin": u.email.lower() == SUPER_ADMIN_EMAIL})
 
 
 @app.route("/api/auth/logout", methods=["POST"])
@@ -186,6 +197,8 @@ def _apply_qr_data(code, data):
         "title", "qr_type", "redirect_url",
         "fg_color", "bg_color", "dot_shape", "error_correction",
         "page_bg_color", "page_bg_image", "page_title", "page_description", "promo_code",
+        "button_bg_color", "button_text_color",
+        "logo_transparent", "logo_rounded", "landing_logo_rounded", "hide_landing_logo",
     ]:
         if field in data:
             setattr(code, field, data[field])
@@ -210,6 +223,23 @@ def upload_logo(qr_id):
     code.logo_path = f"/static/uploads/{fname}"
     db.session.commit()
     return jsonify({"ok": True, "logo_path": code.logo_path})
+
+@app.route("/api/qr/<int:qr_id>/landing_logo", methods=["POST"])
+@login_required
+def upload_landing_logo(qr_id):
+    code = QRCode.query.get_or_404(qr_id)
+    if code.user_id != session["user_id"]:
+        abort(403)
+    f = request.files.get("logo")
+    if not f:
+        return jsonify({"error": "no file"}), 400
+    ext = f.filename.rsplit(".", 1)[-1].lower() if "." in f.filename else "png"
+    fname = f"landing_{uuid.uuid4().hex}.{ext}"
+    path = os.path.join(UPLOAD_DIR, fname)
+    f.save(path)
+    code.landing_logo_path = f"/static/uploads/{fname}"
+    db.session.commit()
+    return jsonify({"ok": True, "landing_logo_path": code.landing_logo_path})
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -248,10 +278,30 @@ def qr_image(qr_id):
             logo = Image.open(logo_file).convert("RGBA")
             logo_size = int(img.size[0] * 0.25)
             logo = logo.resize((logo_size, logo_size), Image.LANCZOS)
+            
+            if code.logo_rounded:
+                mask = Image.new("L", logo.size, 0)
+                draw = ImageDraw.Draw(mask)
+                draw.ellipse((0, 0, logo_size, logo_size), fill=255)
+                if "A" in logo.getbands():
+                    alpha = logo.split()[3]
+                    mask = Image.composite(alpha, Image.new("L", logo.size, 0), mask)
+                logo.putalpha(mask)
+
             pos = ((img.size[0] - logo_size) // 2, (img.size[1] - logo_size) // 2)
-            # White background behind logo
-            white_bg = Image.new("RGBA", (logo_size + 16, logo_size + 16), bg)
-            img.paste(white_bg, (pos[0] - 8, pos[1] - 8))
+            
+            if not code.logo_transparent:
+                bg_size = logo_size + 16
+                white_bg = Image.new("RGBA", (bg_size, bg_size), bg)
+                bg_pos = (pos[0] - 8, pos[1] - 8)
+                if code.logo_rounded:
+                    bg_mask = Image.new("L", (bg_size, bg_size), 0)
+                    draw_bg = ImageDraw.Draw(bg_mask)
+                    draw_bg.ellipse((0, 0, bg_size, bg_size), fill=255)
+                    img.paste(white_bg, bg_pos, mask=bg_mask)
+                else:
+                    img.paste(white_bg, bg_pos)
+            
             img.paste(logo, pos, logo)
 
     buf = io.BytesIO()
@@ -343,6 +393,112 @@ def log_event(qr_id):
 
 
 # ═══════════════════════════════════════════════════════════════════
+# Super Admin & Settings
+# ═══════════════════════════════════════════════════════════════════
+@app.route("/api/settings", methods=["GET"])
+def get_settings():
+    s = GlobalSettings.query.first()
+    return jsonify(s.to_dict())
+
+
+@app.route("/api/settings", methods=["PUT"])
+@login_required
+def update_settings():
+    if not is_super_admin():
+        abort(403)
+    data = request.get_json(force=True)
+    if "admin_message_btn_url" in data:
+        url = data["admin_message_btn_url"].strip()
+        if url and not url.startswith(("http://", "https://")):
+            data["admin_message_btn_url"] = "http://" + url
+            
+    s = GlobalSettings.query.first()
+    for field in ["platform_name", "admin_message_show", "admin_message_text", "admin_message_btn_text", "admin_message_btn_url"]:
+        if field in data:
+            setattr(s, field, data[field])
+    db.session.commit()
+    return jsonify(s.to_dict())
+
+
+@app.route("/api/settings/logo", methods=["POST"])
+@login_required
+def upload_platform_logo():
+    if not is_super_admin():
+        abort(403)
+    f = request.files.get("logo")
+    if not f:
+        return jsonify({"error": "no file"}), 400
+    ext = f.filename.rsplit(".", 1)[-1].lower() if "." in f.filename else "png"
+    fname = f"platform_{uuid.uuid4().hex}.{ext}"
+    path = os.path.join(UPLOAD_DIR, fname)
+    f.save(path)
+    s = GlobalSettings.query.first()
+    s.platform_logo_path = f"/static/uploads/{fname}"
+    db.session.commit()
+    return jsonify({"ok": True, "logo_path": s.platform_logo_path})
+
+
+@app.route("/api/settings/icon", methods=["POST"])
+@login_required
+def upload_platform_icon():
+    if not is_super_admin():
+        abort(403)
+    f = request.files.get("icon")
+    if not f:
+        return jsonify({"error": "no file"}), 400
+    ext = f.filename.rsplit(".", 1)[-1].lower() if "." in f.filename else "png"
+    fname = f"icon_{uuid.uuid4().hex}.{ext}"
+    path = os.path.join(UPLOAD_DIR, fname)
+    f.save(path)
+    s = GlobalSettings.query.first()
+    s.admin_message_icon = f"/static/uploads/{fname}"
+    db.session.commit()
+    return jsonify({"ok": True, "icon_path": s.admin_message_icon})
+
+
+@app.route("/api/admin/stats", methods=["GET"])
+@login_required
+def admin_stats():
+    if not is_super_admin():
+        abort(403)
+    
+    now = datetime.utcnow()
+    today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    week = today - timedelta(days=today.weekday())
+    month = today.replace(day=1)
+    year = today.replace(month=1, day=1)
+
+    all_qrs = QRCode.query.all()
+    qrs_today = sum(1 for q in all_qrs if q.created_at >= today)
+    qrs_week = sum(1 for q in all_qrs if q.created_at >= week)
+    qrs_month = sum(1 for q in all_qrs if q.created_at >= month)
+    qrs_year = sum(1 for q in all_qrs if q.created_at >= year)
+
+    active_users = User.query.count()
+
+    users = User.query.order_by(User.created_at.desc()).all()
+    users_data = [{
+        "id": u.id,
+        "name": u.name,
+        "email": u.email,
+        "created_at": u.created_at.isoformat() if u.created_at else None,
+        "qrs_count": len(u.qr_codes)
+    } for u in users]
+
+    return jsonify({
+        "qrs": {
+            "today": qrs_today,
+            "week": qrs_week,
+            "month": qrs_month,
+            "year": qrs_year,
+            "all_time": len(all_qrs)
+        },
+        "active_users": active_users,
+        "users_list": users_data
+    })
+
+
+# ═══════════════════════════════════════════════════════════════════
 # Page routes
 # ═══════════════════════════════════════════════════════════════════
 @app.route("/")
@@ -354,13 +510,14 @@ def index():
 
 @app.route("/login")
 def login_page():
-    return render_template("login.html")
+    # Pass settings to template (e.g., for platform name on login page)
+    return render_template("login.html", settings=GlobalSettings.query.first())
 
 
 @app.route("/dashboard")
 @login_required
 def dashboard_page():
-    return render_template("dashboard.html")
+    return render_template("dashboard.html", settings=GlobalSettings.query.first(), is_admin=is_super_admin())
 
 
 @app.route("/go/<slug>")
@@ -374,9 +531,31 @@ def landing_page(slug):
         db.session.add(log)
         db.session.commit()
         return redirect(code.redirect_url)
-    return render_template("landing.html", code=code)
+    return render_template("landing.html", code=code, settings=GlobalSettings.query.first())
 
 
 # ═══════════════════════════════════════════════════════════════════
-if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5222)
+if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
+        # Auto-migrate existing DB 
+        from sqlalchemy import text, inspect
+        with db.engine.connect() as conn:
+            inspector = inspect(db.engine)
+            if inspector.has_table("qr_codes"):
+                cols = [c["name"] for c in inspector.get_columns("qr_codes")]
+                if "logo_transparent" not in cols:
+                    conn.execute(text("ALTER TABLE qr_codes ADD COLUMN logo_transparent BOOLEAN DEFAULT 0"))
+                if "logo_rounded" not in cols:
+                    conn.execute(text("ALTER TABLE qr_codes ADD COLUMN logo_rounded BOOLEAN DEFAULT 0"))
+                if "landing_logo_rounded" not in cols:
+                    conn.execute(text("ALTER TABLE qr_codes ADD COLUMN landing_logo_rounded BOOLEAN DEFAULT 0"))
+                if "hide_landing_logo" not in cols:
+                    conn.execute(text("ALTER TABLE qr_codes ADD COLUMN hide_landing_logo BOOLEAN DEFAULT 0"))
+            
+            if inspector.has_table("global_settings"):
+                cols = [c["name"] for c in inspector.get_columns("global_settings")]
+                if "admin_message_btn_text" not in cols:
+                    conn.execute(text("ALTER TABLE global_settings ADD COLUMN admin_message_btn_text VARCHAR(64) DEFAULT 'View'"))
+            conn.commit()
+    app.run(host='0.0.0.0', port=5222, debug=True)
