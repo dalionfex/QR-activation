@@ -14,6 +14,7 @@ from functools import wraps
 import qrcode
 import qrcode.image.styledpil
 import qrcode.image.styles.moduledrawers
+import requests
 from PIL import Image, ImageDraw
 from flask import (
     Flask, jsonify, render_template, request,
@@ -28,7 +29,12 @@ from models import db, User, QRCode, ScanLog, GlobalSettings
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key-change-in-prod")
 # Database config
-db_url = os.environ.get("DATABASE_URL", "sqlite:///qr_saas.db")
+# On Vercel the deployment filesystem is read-only except /tmp, so without a real
+# DATABASE_URL (e.g. Neon/Supabase Postgres) fall back to an ephemeral SQLite file
+# in /tmp — enough to boot and test the UI, but data resets on every cold start.
+db_url = os.environ.get("DATABASE_URL", "")
+if not db_url:
+    db_url = "sqlite:////tmp/qr_saas.db" if os.environ.get("VERCEL") else "sqlite:///qr_saas.db"
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
 app.config["SQLALCHEMY_DATABASE_URI"] = db_url
@@ -36,8 +42,54 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["MAX_CONTENT_LENGTH"] = 4 * 1024 * 1024  # 4 MB upload limit
 
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "static", "uploads")
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+try:
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+except OSError:
+    # Read-only filesystem (e.g. Vercel serverless) — uploads go to Blob storage instead.
+    pass
 app.config['UPLOAD_FOLDER'] = UPLOAD_DIR # Added for settings_logo route
+
+# Vercel Blob storage — set BLOB_READ_WRITE_TOKEN to store uploads there instead of
+# on local disk (required on Vercel, whose serverless filesystem is read-only/ephemeral).
+BLOB_TOKEN = os.environ.get("BLOB_READ_WRITE_TOKEN", "")
+
+
+def save_upload(file_storage, prefix):
+    """Save an uploaded file, returning the path/URL to store on the model.
+
+    Uses Vercel Blob when BLOB_READ_WRITE_TOKEN is set, otherwise falls back to
+    local disk under static/uploads (used for local dev and non-Vercel hosts).
+    """
+    ext = file_storage.filename.rsplit(".", 1)[-1].lower() if "." in file_storage.filename else "png"
+    fname = f"{prefix}{uuid.uuid4().hex}.{ext}"
+
+    if BLOB_TOKEN:
+        resp = requests.put(
+            f"https://blob.vercel-storage.com/{fname}",
+            data=file_storage.read(),
+            headers={
+                "Authorization": f"Bearer {BLOB_TOKEN}",
+                "x-api-version": "7",
+                "content-type": file_storage.mimetype or "application/octet-stream",
+            },
+            timeout=30,
+        )
+        resp.raise_for_status()
+        return resp.json()["url"]
+
+    path = os.path.join(UPLOAD_DIR, fname)
+    file_storage.save(path)
+    return f"/static/uploads/{fname}"
+
+
+def open_image(path_or_url):
+    """Open a PIL image from either a local static path or a remote Blob URL."""
+    if path_or_url.startswith("http://") or path_or_url.startswith("https://"):
+        resp = requests.get(path_or_url, timeout=15)
+        resp.raise_for_status()
+        return Image.open(io.BytesIO(resp.content)).convert("RGBA")
+    local_path = os.path.join(os.path.dirname(__file__), path_or_url.lstrip("/"))
+    return Image.open(local_path).convert("RGBA")
 
 # Base URL for QR codes — set this to your public URL when deployed
 # e.g. export BASE_URL=https://yourdomain.com
@@ -228,11 +280,7 @@ def upload_logo(qr_id):
     f = request.files.get("logo")
     if not f:
         return jsonify({"error": "no file"}), 400
-    ext = f.filename.rsplit(".", 1)[-1].lower() if "." in f.filename else "png"
-    fname = f"{uuid.uuid4().hex}.{ext}"
-    path = os.path.join(UPLOAD_DIR, fname)
-    f.save(path)
-    code.logo_path = f"/static/uploads/{fname}"
+    code.logo_path = save_upload(f, "logo_")
     db.session.commit()
     return jsonify({"ok": True, "logo_path": code.logo_path})
 
@@ -245,11 +293,7 @@ def upload_landing_logo(qr_id):
     f = request.files.get("logo")
     if not f:
         return jsonify({"error": "no file"}), 400
-    ext = f.filename.rsplit(".", 1)[-1].lower() if "." in f.filename else "png"
-    fname = f"landing_{uuid.uuid4().hex}.{ext}"
-    path = os.path.join(UPLOAD_DIR, fname)
-    f.save(path)
-    code.landing_logo_path = f"/static/uploads/{fname}"
+    code.landing_logo_path = save_upload(f, "landing_")
     db.session.commit()
     return jsonify({"ok": True, "landing_logo_path": code.landing_logo_path})
 
@@ -285,9 +329,11 @@ def qr_image(qr_id):
 
     # Overlay logo
     if code.logo_path:
-        logo_file = os.path.join(os.path.dirname(__file__), code.logo_path.lstrip("/"))
-        if os.path.exists(logo_file):
-            logo = Image.open(logo_file).convert("RGBA")
+        try:
+            logo = open_image(code.logo_path)
+        except (requests.RequestException, OSError):
+            logo = None
+        if logo is not None:
             logo_size = int(img.size[0] * 0.25)
             logo = logo.resize((logo_size, logo_size), Image.LANCZOS)
             
@@ -440,13 +486,8 @@ def settings_logo():
     file = request.files['logo']
     if file.filename == '':
         return jsonify({"error": "No file"}), 400
-        
-    ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else 'png'
-    filename = f"platform_logo_{uuid.uuid4().hex}.{ext}"
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    file.save(filepath)
-    
-    s.platform_logo_path = f"/static/uploads/{filename}"
+
+    s.platform_logo_path = save_upload(file, "platform_logo_")
     db.session.commit()
     return jsonify({"ok": True, "logo_url": s.platform_logo_path})
 
@@ -460,12 +501,8 @@ def upload_platform_icon():
     f = request.files.get("icon")
     if not f:
         return jsonify({"error": "no file"}), 400
-    ext = f.filename.rsplit(".", 1)[-1].lower() if "." in f.filename else "png"
-    fname = f"icon_{uuid.uuid4().hex}.{ext}"
-    path = os.path.join(UPLOAD_DIR, fname)
-    f.save(path)
     s = GlobalSettings.query.first()
-    s.admin_message_icon = f"/static/uploads/{fname}"
+    s.admin_message_icon = save_upload(f, "icon_")
     db.session.commit()
     return jsonify({"ok": True, "icon_path": s.admin_message_icon})
 
